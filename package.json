@@ -1,0 +1,24 @@
+{
+  "name": "micromania-parser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "casperjs": "^1.1.4",
+    "cheerio": "^0.22.0",
+    "cloudscraper": "^1.4.1",
+    "jquery": "^3.2.1",
+    "jsdom": "^10.1.0",
+    "osmosis": "^1.1.4",
+    "phantom": "^4.0.3",
+    "request-promise": "^4.2.1"
+  },
+  "devDependencies": {
+    "zombie": "^5.0.5"
+  }
+}
