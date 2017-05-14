@@ -3,23 +3,29 @@ const execFile = require('child_process').execFile;
 const fs = require('fs');
 const Db = require('tingodb')().Db;
 const assert = require('assert');
+const express = require('express');
 
 var db = new Db('./db/', {});
+var app = express()
+app.set('view engine', 'ejs');
 
-const NB_PAGE = 3;
-const PLATFORM = 'wii';
 
 // Get HTML content from an url
 // Use casperjs to bypass anti-bot security
 const url_get_content = url => new Promise((r, e) =>
 	url
-	? execFile('casperjs', ['./casper.js', '--url=' + url], {maxBuffer: 1024 * 1000}, (error, stdout, sterr) => {
-		error ? e(error) : r(stdout)
-	})
+	? execFile('casperjs', 
+		['./casper.js', '--url=' + url],
+		{maxBuffer: 1024 * 1000},
+		(error, stdout, sterr) => {
+			error ? e(error) : r(stdout)
+		}
+	)
 	: error('No URL')
 );
 
-const build_url = (platform, page) => 'http://www.micromania.fr/autres/' + platform + '/jeux-occasion.html?dir=desc&order=price&p=' + page;
+const build_url = (platform, page) =>
+	'http://www.micromania.fr/autres/' + platform + '/jeux-occasion.html?dir=desc&order=price&p=' + page;
 
 // Moke HTML content of http://www.micromania.fr/autres/wii/jeux-occasion.html?dir=desc&order=price&p=1
 const moke_html = (platform, page) => new Promise((r,err) =>
@@ -82,7 +88,7 @@ const platform_db = (platform) => {
 		.find({})
 		.sort({timestamp: -1})
 		.limit(1)
-		.toArray((err, item) => r(item[0].timestamp))
+		.toArray((err, item) => r(item ? item[0].timestamp : 0))
 	),
 
 	// Return array of items stored on a timestamp
@@ -103,14 +109,6 @@ const platform_db = (platform) => {
 
 }}
 
-
-function go_store()
-{
-	get_items(PLATFORM, NB_PAGE)
-	.then(json => platform_db(PLATFORM).store_indb(json, + new Date()))
-	//.then(json => store_infile(build_filename(PLATFORM), json))
-	//.then(console.log)
-}
 
 // Return all items added in new_items from old_items
 const get_added = (old_items, new_items) =>
@@ -162,15 +160,34 @@ const build = (timestamp, p_db) => new Promise(r => {
 		});
 });
 
-function go_build() {
-	let p_db = platform_db(PLATFORM);
+app.get('/games/:platform', function (req, res) {
+	let p_db = platform_db(req.params.platform);
 	p_db
 		.get_lasttimestamp()
 		.then(ts => build(ts, p_db))
-		.then(console.log)
+		.then(list => res.render('games', {"list_diff": list}))
+})
+
+
+function go_store()
+{
+	const NB_PAGE = 20;
+	const PLATFORM = 'wii';
+
+	console.log('Start storage...');
+
+	get_items(PLATFORM, NB_PAGE)
+	.then(json => {
+		platform_db(PLATFORM).store_indb(json, + new Date())
+		store_infile('./last_storage.json', json);
+	});
 }
 
-go_build();
+function go_serve() {
+	app.listen(3000, () => {
+		console.log('App listening on port 3000!')
+	})
+}
+
 //go_store();
-
-
+go_serve();

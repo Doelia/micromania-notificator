@@ -1,0 +1,24 @@
+<!DOCTYPE HTML>
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>Game list</title>
+</head>
+
+<body>
+    <% list_diff.forEach(diff => { %>
+        <h2>Added the <%= (new Date(diff.timestamp)).toUTCString() %> (<%= diff.added.length %> added)</h2>
+        <% diff.added.forEach(item => { %>
+            <p style="margin: 20px">
+                <a href="<%= item.link %>">
+                    <img src="<%= item.image %>" alt="" style="float: left">
+                </a>
+                <b><%- item.name %></b> <br>
+                <%- item.price %>
+            </p>
+            <p style="clear: both"></p>
+        <% }) %>
+    <% }) %>
+</body>
