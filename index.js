@@ -5,30 +5,37 @@ const Db = require('tingodb')().Db;
 const assert = require('assert');
 const express = require('express');
 
-var db = new Db('./db/', {});
+var argv = require('minimist')(process.argv.slice(2));
 var app = express()
 app.set('view engine', 'ejs');
 
 
 // Get HTML content from an url
 // Use casperjs to bypass anti-bot security
-const url_get_content = url => new Promise((r, e) =>
+const url_get_content = url => new Promise((r, e) => {
+	console.log('start scraping page', url, '...');
 	url
 	? execFile('casperjs', 
 		['./casper.js', '--url=' + url],
 		{maxBuffer: 1024 * 1000},
 		(error, stdout, sterr) => {
+			console.log('scraping page', url, 'done');
 			error ? e(error) : r(stdout)
 		}
 	)
 	: error('No URL')
-);
+});
+
+const platform_page = {
+	'wii': 'autres/wii/jeux-occasion.html',
+	'ps4': 'ps4/jeux/occasions.html',
+};
 
 const build_url = (platform, page) =>
-	'http://www.micromania.fr/autres/' + platform + '/jeux-occasion.html?dir=desc&order=price&p=' + page;
+	'http://www.micromania.fr/' + platform_page[platform] + '?dir=desc&order=price&p=' + page;
 
 // Moke HTML content of http://www.micromania.fr/autres/wii/jeux-occasion.html?dir=desc&order=price&p=1
-const moke_html = (platform, page) => new Promise((r,err) =>
+const moke_html = (platform, page) => new Promise(r =>
 	fs.readFile('./moke.html', 'utf8', (err,data) => r(data))
 );
 
@@ -54,11 +61,26 @@ const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
+function delayPromise(duration) {
+  return function(...args){
+    return new Promise(function(resolve, reject){
+      setTimeout(function(){
+        resolve(...args);
+      }, duration)
+    });
+  };
+}
+
 // Return all items from a platform, in looping on pages from 1 to max_page
 const get_items = (platform, max_page) => {
 	let full_items = [];
-	for (let page = 0; page < max_page; page++) {
-		full_items.push(get_items_on_page(platform, page));
+	for (let page = 1; page <= max_page; page++) {
+			full_items.push(new Promise(r =>
+				// Delay to prevent ban for DOS reason
+				setTimeout(() => r(
+					get_items_on_page(platform, page)
+				), 500 * page)
+			));
 	}
 	return Promise.all(full_items)
 		.then(tab => tab.reduce((p,c) => [...p, ...c], []))
@@ -72,6 +94,7 @@ const store_infile = (filename, json) =>
 // DB Manager for a platform
 const platform_db = (platform) => { 
 
+	var db = new Db('./db/', {});
 	let collection = db.collection(platform);
 	
 	return {
@@ -169,25 +192,37 @@ app.get('/games/:platform', function (req, res) {
 })
 
 
-function go_store()
+function go_scrap()
 {
-	const NB_PAGE = 20;
-	const PLATFORM = 'wii';
+	let platform = argv['platform'];
+	let nb_page = argv['maxpage'] || 1;
 
-	console.log('Start storage...');
+	if (!platform) {
+		console.info('Please provite platform');
+		process.exit(1);
+	}
 
-	get_items(PLATFORM, NB_PAGE)
+	console.info('Start scraping, platform', platform, 'pages 1 to', nb_page, '...');
+
+	get_items(platform, nb_page)
 	.then(json => {
-		platform_db(PLATFORM).store_indb(json, + new Date())
+		platform_db(platform).store_indb(json, + new Date())
 		store_infile('./last_storage.json', json);
+		console.info('Done!');
 	});
 }
 
 function go_serve() {
-	app.listen(3000, () => {
-		console.log('App listening on port 3000!')
+	let port = argv['port'] || 3000;
+	app.listen(port, () => {
+		console.info('App listening on port ' + port)
 	})
 }
 
-//go_store();
-go_serve();
+switch (argv._[0]) {
+	case 'serve': go_serve(); break;
+	case 'scrap': go_scrap(); break;
+	default:
+		console.info('serve --port 80')
+		console.info('scrap --platform wii --maxpage 20')
+}
