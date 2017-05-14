@@ -2,3 +2,4 @@ node_modules
 *.swp
 last_storage.json
 db
+.vscode

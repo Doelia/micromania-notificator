@@ -1,5 +1,4 @@
 const cheerio = require('cheerio')
-const $ = require('jquery');
 const execFile = require('child_process').execFile;
 const fs = require('fs');
 const Db = require('tingodb')().Db;
@@ -33,8 +32,8 @@ const extract_items_from_document = $ => {
 	$('.item').each(function() {
 		tab.push({
 			'price': $(this).find('.price').html(),
-			'name': $(this).find('.product-name a').html(),
-			'link': $(this).find('.product-name a').attr('href'),
+			'name' : $(this).find('.product-name a').html(),
+			'link' : $(this).find('.product-name a').attr('href'),
 			'image': $(this).find('.product-image img').attr('src'),
 		});
 	});
@@ -44,8 +43,8 @@ const extract_items_from_document = $ => {
 // Build and return array of items on the desired platform of the page
 const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(() => build_url(platform, page))
-	.then(moke_html)
-//	.then(url_get_content)
+//	.then(moke_html)
+	.then(url_get_content)
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
@@ -108,34 +107,70 @@ const platform_db = (platform) => {
 function go_store()
 {
 	get_items(PLATFORM, NB_PAGE)
-	.then(json => store_indb(PLATFORM, json, + new Date()))
+	.then(json => platform_db(PLATFORM).store_indb(json, + new Date()))
 	//.then(json => store_infile(build_filename(PLATFORM), json))
 	//.then(console.log)
 }
 
+// Return all items added in new_items from old_items
+const get_added = (old_items, new_items) =>
+	new_items.filter(v => !old_items
+		.map(o => o.name)
+		.some(o => o == v.name)
+	)
+
+// Return items added at timestamp
+const get_diff = (p_db, timestamp) => {
+
+	let last_ts;
+	let previous_ts;
+	let new_items = [];
+	let old_items = [];
+
+	return p_db.get_items_fromtimestamp(timestamp)
+		.then(v => {
+			last_ts = timestamp;
+			new_items = v;
+			return timestamp;
+		})
+		.then(p_db.get_previous_timestamp)
+		.then(timestamp => p_db.get_items_fromtimestamp(timestamp)
+			.then(v => {
+				previous_ts = timestamp;
+				old_items = v;
+				return timestamp;
+			})
+		)
+		.then(() => get_added(old_items, new_items))
+		.then(added => {
+			return {
+				'timestamp': last_ts,
+				'previous_timestamp': previous_ts,
+				'added': added
+			}
+		})
+}
+
+// Return all items added for each stored step
+const build = (timestamp, p_db) => new Promise(r => {
+	if (!timestamp) return r([]);
+	get_diff(p_db, timestamp)
+		.then(diff => {
+			build(diff.previous_timestamp, p_db).then(
+				out => r([diff, ...out])
+			)
+		});
+});
+
+function go_build() {
+	let p_db = platform_db(PLATFORM);
+	p_db
+		.get_lasttimestamp()
+		.then(ts => build(ts, p_db))
+		.then(console.log)
+}
+
+go_build();
 //go_store();
-//
-
-let p_db = platform_db(PLATFORM);
-let curent_items = [];
-let previous_items = [];
-p_db
-	.get_lasttimestamp()
-	.then(timestamp => p_db.get_items_fromtimestamp(timestamp)
-		.then(v => {
-			curent_items = v;
-			return timestamp;
-		})
-	)
-	.then(p_db.get_previous_timestamp)
-	.then(timestamp => p_db.get_items_fromtimestamp(timestamp)
-		.then(v => {
-			previous_items = v;
-			return timestamp;
-		})
-	)
-	.then(() => { return {curent_items, previous_items}})
-	.then(console.log)
-
 
 
