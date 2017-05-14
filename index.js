@@ -8,7 +8,7 @@ const PLATFORM = 'wii';
 
 const get_content = url => new Promise((r, e) =>
 	url
-	? execFile('casperjs', ['./casper.js', '--url=' + url], (error, stdout, sterr) => {
+	? execFile('casperjs', ['./casper.js', '--url=' + url], {maxBuffer: 1024 * 1000}, (error, stdout, sterr) => {
 		error ? e(error) : r(stdout)
 	})
 	: error('No URL')
