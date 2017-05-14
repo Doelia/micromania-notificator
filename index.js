@@ -3,13 +3,13 @@ const $ = require('jquery');
 const execFile = require('child_process').execFile;
 const fs = require('fs');
 
-const NB_PAGE = 20;
+const NB_PAGE = 3;
 const PLATFORM = 'wii';
 
-const get_content = url => new Promise((resolve, error) =>
+const get_content = url => new Promise((r, e) =>
 	url
 	? execFile('casperjs', ['./casper.js', '--url=' + url], (error, stdout, sterr) => {
-		resolve(stdout);
+		error ? e(error) : r(stdout)
 	})
 	: error('No URL')
 );
@@ -49,7 +49,7 @@ const get_items = (platform, max_page) => {
 		.then(tab => tab.reduce((p,c) => [...p, ...c], []))
 }
 
-const store_infile = (json) => fs.writeFile('last_storage.json', JSON.stringify(json, null, 4), 'utf8');
+const store_infile = (json) => fs.writeFile('./last_storage.json', JSON.stringify(json, null, 4), 'utf8', () => {});
 
 const compare_list_items = (l1, l2) => {
 
