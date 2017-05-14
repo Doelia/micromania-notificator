@@ -61,16 +61,6 @@ const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
-function delayPromise(duration) {
-  return function(...args){
-    return new Promise(function(resolve, reject){
-      setTimeout(function(){
-        resolve(...args);
-      }, duration)
-    });
-  };
-}
-
 // Return all items from a platform, in looping on pages from 1 to max_page
 const get_items = (platform, max_page) => {
 	let full_items = [];
