@@ -64,13 +64,15 @@ const get_items_on_page = (platform, page) => Promise.resolve()
 // Return all items from a platform, in looping on pages from 1 to max_page
 const get_items = (platform, max_page) => {
 	let full_items = [];
+	let previous = Promise.resolve();
 	for (let page = 1; page <= max_page; page++) {
-			full_items.push(new Promise(r =>
-				// Delay to prevent ban for DOS reason
-				setTimeout(() => r(
-					get_items_on_page(platform, page)
-				), 500 * page)
-			));
+		// Execute one by one
+		previous = (new Promise(r => {
+			previous.then(() => {
+				r(get_items_on_page(platform, page));
+			});
+		}));
+		full_items.push(previous);
 	}
 	return Promise.all(full_items)
 		.then(tab => tab.reduce((p,c) => [...p, ...c], []))
@@ -89,7 +91,7 @@ const platform_db = (platform) => {
 	
 	return {
 
-    // Store in persitant DB an array of items.
+	// Store in persitant DB an array of items.
 	// Give a timestamp to archive it
 	store_indb: (items, timestamp) =>
 		items.forEach(v => collection.insert({ v, timestamp}))
