@@ -57,8 +57,8 @@ const extract_items_from_document = $ => {
 // Build and return array of items on the desired platform of the page
 const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(() => build_url(platform, page))
-	.then(moke_html)
-//	.then(url_get_content)
+//	.then(moke_html)
+	.then(url_get_content)
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
