@@ -133,6 +133,13 @@ const get_added = (old_items, new_items) =>
 		.some(o => o == v.name)
 	)
 
+// Return all items deleted in new_items from old_items
+const get_deleted = (old_items, new_items) =>
+	old_items.filter(v => !new_items
+		.map(o => o.name)
+		.some(o => o == v.name)
+	)
+
 // Return items added at timestamp
 const get_diff = (p_db, timestamp) => {
 
@@ -155,14 +162,13 @@ const get_diff = (p_db, timestamp) => {
 				return timestamp;
 			})
 		)
-		.then(() => get_added(old_items, new_items))
-		.then(added => {
+		.then(() => {
 			return {
 				'timestamp': last_ts,
 				'previous_timestamp': previous_ts,
-				'added': added
-			}
-		})
+				'added': get_added(old_items, new_items),
+				'deleted': get_deleted(old_items, new_items),
+			}})
 }
 
 // Return all items added for each stored step
@@ -215,7 +221,7 @@ function go_scrap()
 function go_serve() {
 	let port = argv['port'] || 3000;
 	app.listen(port, () => {
-		console.info('App listening on port ' + port)
+		console.info('App listening on port ' + port);
 	})
 }
 

@@ -7,15 +7,32 @@
 	<title>Game list</title>
 </head>
 
+<style>
+.game {
+	margin: 20px;
+}
+</style>
+
 <body>
     <% list_diff.forEach(diff => { %>
         <h2>Added the <%= (new Date(diff.timestamp)).toUTCString() %> (<%= diff.added.length %> added)</h2>
         <% diff.added.forEach(item => { %>
-            <p style="margin: 20px">
+            <p class="game">
                 <a href="<%= item.link %>">
-                    <img src="<%= item.image %>" alt="" style="float: left">
+			       <img src="<%= item.image %>" alt="" style="float: left"> 
                 </a>
-                <b><%- item.name %></b> <br>
+                <b><%- item.name %></b><br>
+                <%- item.price %>
+            </p>
+            <p style="clear: both"></p>
+        <% }) %>
+	<h2>Removed  (<%= diff.deleted.length %>)</h2>
+		<% diff.deleted.forEach(item => { %>
+            <p class="game">
+                <a href="<%= item.link %>">
+			  <img src="<%= item.image %>" alt="" style="float: left"> 
+                </a>
+                <b><%- item.name %></b><br>
                 <%- item.price %>
             </p>
             <p style="clear: both"></p>
