@@ -9,7 +9,6 @@ var argv = require('minimist')(process.argv.slice(2));
 var app = express()
 app.set('view engine', 'ejs');
 
-
 // Get HTML content from an url
 // Use casperjs to bypass anti-bot security
 const url_get_content = url => new Promise((r, e) => {
@@ -57,8 +56,8 @@ const extract_items_from_document = $ => {
 // Build and return array of items on the desired platform of the page
 const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(() => build_url(platform, page))
-//	.then(moke_html)
-	.then(url_get_content)
+	.then(moke_html)
+//	.then(url_get_content)
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
@@ -94,6 +93,7 @@ const platform_db = (platform) => {
 
 	// Store in persitant DB an array of items.
 	// Give a timestamp to archive it
+	// TODO return promise with json insert
 	store_indb: (items, timestamp) =>
 		items.forEach(v => collection.insert({ v, timestamp}))
 	,
@@ -189,6 +189,7 @@ function go_scrap()
 {
 	let platform = argv['platform'];
 	let nb_page = argv['maxpage'] || 1;
+	let p_db = platform_db(platform);
 
 	if (!platform || !platform_page[platform]) {
 		console.info('Please provite an existing platform');
@@ -198,11 +199,17 @@ function go_scrap()
 	console.info('Start scraping, platform', platform, 'pages 1 to', nb_page, '...');
 
 	get_items(platform, nb_page)
-	.then(json => {
-		platform_db(platform).store_indb(json, + new Date())
-		store_infile('./last_storage.json', json);
+	.then(json => p_db.store_indb(json, + new Date()))
+	.then(json => store_infile('./last_storage.json', json))
+	.then(() => {
 		console.info('Done!');
-	});
+		return p_db.get_lasttimestamp()
+	})
+	.then(ts => get_diff(p_db, ts))
+	.then(diff => {
+		console.log('added in platform ', platform, ':', diff);
+		// TODO send noticifaciotn ?
+	})
 }
 
 function go_serve() {
