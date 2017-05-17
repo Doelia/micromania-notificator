@@ -29,6 +29,7 @@ const url_get_content = url => new Promise((r, e) => {
 const platform_page = {
 	'wii': 'autres/wii/jeux-occasion.html',
 	'ps4': 'ps4/jeux/occasions.html',
+	'xbox360': 'xbox-360/jeux/occasions.html'
 };
 
 const build_url = (platform, page) =>
@@ -36,7 +37,7 @@ const build_url = (platform, page) =>
 
 // Moke HTML content of http://www.micromania.fr/autres/wii/jeux-occasion.html?dir=desc&order=price&p=1
 const moke_html = (platform, page) => new Promise(r =>
-	fs.readFile('./moke.html', 'utf8', (err,data) => r(data))
+	fs.readFile('./moke_360.html', 'utf8', (err,data) => r(data))
 );
 
 // Build array of games items from DOM document
@@ -56,8 +57,8 @@ const extract_items_from_document = $ => {
 // Build and return array of items on the desired platform of the page
 const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(() => build_url(platform, page))
-//	.then(moke_html)
-	.then(url_get_content)
+	.then(moke_html)
+//	.then(url_get_content)
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
@@ -189,8 +190,8 @@ function go_scrap()
 	let platform = argv['platform'];
 	let nb_page = argv['maxpage'] || 1;
 
-	if (!platform) {
-		console.info('Please provite platform');
+	if (!platform || !platform_page[platform]) {
+		console.info('Please provite an existing platform');
 		process.exit(1);
 	}
 
