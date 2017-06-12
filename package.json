@@ -16,6 +16,7 @@
     "jsdom": "^10.1.0",
     "minimist": "^1.2.0",
     "mongoose": "^4.10.5",
+    "pushover-notifications": "^0.2.4",
     "tingodb": "^0.5.1"
   },
   "devDependencies": {
