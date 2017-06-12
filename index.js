@@ -118,7 +118,7 @@ const platform_db = (platform) => {
 		.find({})
 		.sort({timestamp: -1})
 		.limit(1)
-		.toArray((err, item) => r(item ? item[0].timestamp : 0))
+		.toArray((err, item) => r((item && item[0] && item[0].timestamp) ? item[0].timestamp : 0))
 	),
 
 	// Return array of items stored on a timestamp
