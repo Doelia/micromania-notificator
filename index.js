@@ -220,7 +220,8 @@ const send_push = (platform, new_items) => {
         title: "Micromania notificator",
         sound: 'magic',
         device: 'devicename',
-        priority: 1
+        priority: 1,
+        url: 'http://vps.doelia.fr:8081/games/' + platform
     };
 
     p.send(msg, function(err, result) {
