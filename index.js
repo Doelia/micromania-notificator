@@ -1,7 +1,7 @@
 const cheerio = require('cheerio')
 const execFile = require('child_process').execFile;
 const fs = require('fs');
-const Db = require('tingodb')().Db;
+var mongoose = require('mongoose');
 const assert = require('assert');
 const express = require('express');
 
@@ -12,13 +12,12 @@ app.set('view engine', 'ejs');
 // Get HTML content from an url
 // Use casperjs to bypass anti-bot security
 const url_get_content = url => new Promise((r, e) => {
-	console.log('start scraping page', url, '...');
+	console.log('get content of url', url, '...');
 	url
 	? execFile('casperjs', 
 		['./casper.js', '--url=' + url],
 		{maxBuffer: 1024 * 1000},
 		(error, stdout, sterr) => {
-			console.log('scraping page', url, 'done');
 			error ? e(error) : r(stdout)
 		}
 	)
@@ -28,7 +27,12 @@ const url_get_content = url => new Promise((r, e) => {
 const platform_page = {
 	'wii': 'autres/wii/jeux-occasion.html',
 	'ps4': 'ps4/jeux/occasions.html',
-	'xbox360': 'xbox-360/jeux/occasions.html'
+	'ps2': 'autres/ps2/jeux-occasion.html',
+	'x360': 'xbox-360/jeux/occasions.html',
+	'ps3': 'ps3/jeux/occasions.html',
+	'ds': 'autres/ds/jeux-occasion.html',
+	'3ds': '3ds/jeux/occasions.html',
+	'psp': 'autres/psp/jeux-occasion.html',
 };
 
 const build_url = (platform, page) =>
@@ -38,6 +42,7 @@ const build_url = (platform, page) =>
 const moke_html = (platform, page) => new Promise(r =>
 	fs.readFile('./moke_360.html', 'utf8', (err,data) => r(data))
 );
+
 
 // Build array of games items from DOM document
 const extract_items_from_document = $ => {
@@ -53,11 +58,21 @@ const extract_items_from_document = $ => {
 	return tab;
 };
 
+const get_max_page = (platform) => Promise.resolve()
+	.then(() => build_url(platform, 100))
+	.then(url_get_content)
+	.then(cheerio.load)
+	.then($ => {
+		return 1;
+		// return $('.pages li.current').html();
+	})
+
+
 // Build and return array of items on the desired platform of the page
 const get_items_on_page = (platform, page) => Promise.resolve()
 	.then(() => build_url(platform, page))
-	.then(moke_html)
-//	.then(url_get_content)
+//	.then(moke_html)
+	.then(url_get_content)
 	.then(cheerio.load)
 	.then(extract_items_from_document)
 
@@ -86,8 +101,8 @@ const store_infile = (filename, json) =>
 // DB Manager for a platform
 const platform_db = (platform) => { 
 
-	var db = new Db('./db/', {});
-	let collection = db.collection(platform);
+	let db = mongoose.connect('mongodb://u1lho0b2lu5ut1b:1v0i1cadcgMkc5G6Ohin@biykwpb3tjueetd-mongodb.services.clever-cloud.com:27017/biykwpb3tjueetd');
+	let collection = db.connection.collection(platform);
 	
 	return {
 
@@ -124,7 +139,6 @@ const platform_db = (platform) => {
 	),
 
 }}
-
 
 // Return all items added in new_items from old_items
 const get_added = (old_items, new_items) =>
@@ -173,6 +187,7 @@ const get_diff = (p_db, timestamp) => {
 
 // Return all items added for each stored step
 const build = (timestamp, p_db) => new Promise(r => {
+	console.log('build', timestamp, '...');
 	if (!timestamp) return r([]);
 	get_diff(p_db, timestamp)
 		.then(diff => {
@@ -194,7 +209,6 @@ app.get('/games/:platform', function (req, res) {
 function go_scrap()
 {
 	let platform = argv['platform'];
-	let nb_page = argv['maxpage'] || 1;
 	let p_db = platform_db(platform);
 
 	if (!platform || !platform_page[platform]) {
@@ -202,9 +216,13 @@ function go_scrap()
 		process.exit(1);
 	}
 
-	console.info('Start scraping, platform', platform, 'pages 1 to', nb_page, '...');
+	console.info('Start scraping, platform', platform, '. Get nb pages...');
 
-	get_items(platform, nb_page)
+	get_max_page(platform)
+	.then(nb_page => {
+		console.info(nb_page, 'pages to process...');
+		return get_items(platform, nb_page)
+	})
 	.then(json => p_db.store_indb(json, + new Date()))
 	.then(json => store_infile('./last_storage.json', json))
 	.then(() => {
@@ -213,7 +231,7 @@ function go_scrap()
 	})
 	.then(ts => get_diff(p_db, ts))
 	.then(diff => {
-		console.log('added in platform ', platform, ':', diff);
+		console.log('added in platform', platform, ':', diff);
 		// TODO send noticifaciotn ?
 	})
 }
@@ -228,6 +246,11 @@ function go_serve() {
 switch (argv._[0]) {
 	case 'serve': go_serve(); break;
 	case 'scrap': go_scrap(); break;
+	case 'index':
+		// var db = new Db('./db/', {});
+		// let collection = db.collection('wii');	
+		// collection.ensureIndex({timestamp:1});
+	break;
 	default:
 		console.info('serve --port 80')
 		console.info('scrap --platform wii --maxpage 20')
