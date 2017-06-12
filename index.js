@@ -258,8 +258,9 @@ function go_scrap() {
         .then(ts => get_diff(p_db, ts))
         .then(diff => {
             console.log('added in platform', platform, ':', diff);
-            send_push(platform, diff.added);
-            // TODO send noticifaciotn ?
+            if (diff.added.length > 0) {
+                send_push(platform, diff.added);
+            }
         })
 }
 
