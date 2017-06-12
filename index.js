@@ -63,8 +63,7 @@ const get_max_page = (platform) => Promise.resolve()
 	.then(url_get_content)
 	.then(cheerio.load)
 	.then($ => {
-		return 1;
-		// return $('.pages li.current').html();
+		return $('.pages li.current').html();
 	})
 
 
@@ -135,7 +134,7 @@ const platform_db = (platform) => {
 		.find({'timestamp': { $lt: timestamp}})
 		.sort({timestamp: -1})
 		.limit(1)
-		.toArray((err, item) => r(item ? item[0].timestamp : 0))
+		.toArray((err, item) => r((item && item[0] && item[0].timestamp) ? item[0].timestamp : 0))
 	),
 
 }}
