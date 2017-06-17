@@ -3,3 +3,4 @@ node_modules
 last_storage.json
 db
 .vscode
+config.json

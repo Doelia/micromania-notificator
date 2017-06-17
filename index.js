@@ -5,10 +5,20 @@ var mongoose = require('mongoose');
 const assert = require('assert');
 const express = require('express');
 const push = require('pushover-notifications');
+var nconf = require('nconf');
 
-var argv = require('minimist')(process.argv.slice(2));
 var app = express()
 app.set('view engine', 'ejs');
+
+// nconf
+nconf.argv()
+    .env()
+    .file({ file: 'config.json' });
+
+nconf.defaults({
+    'PORT': 8080,
+    'WEB_URL': 'http://localhost:' + nconf.get('PORT') + '/',
+});
 
 // Get HTML content from an url
 // Use casperjs to bypass anti-bot security
@@ -100,7 +110,7 @@ const store_infile = (filename, json) =>
 // DB Manager for a platform
 const platform_db = (platform) => {
 
-    let db = mongoose.connect('mongodb://u1lho0b2lu5ut1b:1v0i1cadcgMkc5G6Ohin@biykwpb3tjueetd-mongodb.services.clever-cloud.com:27017/biykwpb3tjueetd');
+    let db = mongoose.connect(nconf.get('MONGODB'));
     let collection = db.connection.collection(platform);
 
     return {
@@ -208,11 +218,14 @@ app.get('/games/:platform', function(req, res) {
 
 const send_push = (platform, new_items) => {
 
+    if (!nconf.get('PUSHOVER_USER_KEY') || !nconf.get('PUSHOVER_TOKEN')) {
+        console.warn('No pushover key, skip push notifaction');
+        return;
+    }
+
     var p = new push({
-        // user: process.env['PUSHOVER_USER'],
-        // token: process.env['PUSHOVER_TOKEN'],
-        user:   'gfkj5xexcoy373sg97f7rrc7441e12', // Group micromamia
-        token: 'arju5w1eiq9oqhq2z2xmaaa6wsgtht'
+        user: nconf.get('PUSHOVER_USER_KEY'),
+        token: nconf.get('PUSHOVER_TOKEN'),
     });
 
     var msg = {
@@ -221,7 +234,7 @@ const send_push = (platform, new_items) => {
         sound: 'magic',
         device: 'devicename',
         priority: 1,
-        url: 'http://vps.doelia.fr:8081/games/' + platform
+        url: nconf.get('WEB_URL') + 'games/' + platform
     };
 
     p.send(msg, function(err, result) {
@@ -234,12 +247,12 @@ const send_push = (platform, new_items) => {
 
 
 function go_scrap() {
-    let platform = argv['platform'];
+    let platform = nconf.get('platform')
     let p_db = platform_db(platform);
 
     if (!platform || !platform_page[platform]) {
-        console.info('Please provite an existing platform');
-        process.exit(1);
+        console.info('Please provite an existing platform with --platform');
+        process.exit(0);
     }
 
     console.info('Start scraping, platform', platform, '. Get nb pages...');
@@ -265,13 +278,12 @@ function go_scrap() {
 }
 
 function go_serve() {
-    let port = argv['port'] || 3000;
-    app.listen(port, () => {
-        console.info('App listening on port ' + port);
+    app.listen(nconf.get('PORT'), () => {
+        console.info('App listening on http://localhost:' + nconf.get('PORT'));
     })
 }
 
-switch (argv._[0]) {
+switch (process.argv[2] || '') {
     case 'serve':
         go_serve();
         break;
@@ -282,6 +294,6 @@ switch (argv._[0]) {
         send_push('wii', []);
         break;
     default:
-        console.info('serve --port 80')
-        console.info('scrap --platform wii --maxpage 20')
+        console.info('npm run scrap')
+        console.info('npm run process -- --platform wii')
 }
