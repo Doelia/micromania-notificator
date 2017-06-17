@@ -281,11 +281,6 @@ switch (argv._[0]) {
     case 'test_push':
         send_push('wii', []);
         break;
-    case 'index':
-        // var db = new Db('./db/', {});
-        // let collection = db.collection('wii');	
-        // collection.ensureIndex({timestamp:1});
-        break;
     default:
         console.info('serve --port 80')
         console.info('scrap --platform wii --maxpage 20')
